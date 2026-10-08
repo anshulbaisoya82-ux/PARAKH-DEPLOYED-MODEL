@@ -161,7 +161,7 @@ def health_check():
         "docs_url": "/docs"
     }
 
-@app.post("/predict-career", response_model=CareerPredictResponse)
+
 @app.post("/predict", response_model=CareerPredictResponse)
 def predict_career(payload: CareerPredictRequest):
     """Predicts suitable career category based on 32 student skills."""
@@ -184,7 +184,7 @@ def predict_career(payload: CareerPredictRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
-@app.post("/cluster-student", response_model=ClusterResponse)
+
 @app.post("/cluster", response_model=ClusterResponse)
 def cluster_student(payload: ClusterRequest):
     """Assigns student to a skill cluster using K-Means (k=2)."""
