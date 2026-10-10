@@ -138,8 +138,6 @@ class SkillGapResponse(BaseModel):
     match_score: float
     skills_you_have: List[str]
     skills_to_learn: List[str]
-    current_skills: List[str]
-    missing_skills: List[str]
 
 
 # Preprocessing the input 
