@@ -9,9 +9,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# ---------------------------------------------------------
+
 # 1. Initialize FastAPI Application
-# ---------------------------------------------------------
+
 app = FastAPI(
     title="PARAKH AI - ML Career Intelligence Service",
     description="Machine Learning Inference Service for Career Prediction, Clustering, and Skill Gap Analysis",
@@ -27,9 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------
+
 # 2. Configurations & Mappings
-# ---------------------------------------------------------
+
 # 32 exact skill features fitted during training
 SKILL_COLUMNS = [
     "python", "java", "c_cpp", "javascript", "typescript", "html_css",
@@ -87,9 +87,9 @@ CAREER_SKILLS = {
     ]
 }
 
-# ---------------------------------------------------------
+
 # 3. Load Trained Artifacts
-# ---------------------------------------------------------
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def load_artifact(filename: str):
@@ -100,20 +100,18 @@ def load_artifact(filename: str):
 
 try:
     scaler = load_artifact("standard_scaler.pkl")
-    pca = load_artifact("pca.pkl")
     supervised_model = load_artifact("supervised_model.pkl")
     kmeans_model = load_artifact("kmeans_model.pkl")
     print("All ML artifacts loaded successfully.")
 except Exception as e:
     print(f"Warning during artifact loading: {e}")
     scaler = None
-    pca = None
     supervised_model = None
     kmeans_model = None
 
-# ---------------------------------------------------------
+
 # 4. Request & Response Schemas
-# ---------------------------------------------------------
+
 # Prediction
 class CareerPredictRequest(BaseModel):
     skills: Dict[str, Any]
@@ -143,16 +141,16 @@ class SkillGapResponse(BaseModel):
     current_skills: List[str]
     missing_skills: List[str]
 
-# ---------------------------------------------------------
-# 5. Helper Function
-# ---------------------------------------------------------
+
+# Preprocessing the input 
+
 def prepare_skill_dataframe(skills_dict: Dict[str, Any]) -> pd.DataFrame:
     row = {col: 1 if skills_dict.get(col, 0) in [1, True, "1"] else 0 for col in SKILL_COLUMNS}
     return pd.DataFrame([row], columns=SKILL_COLUMNS)
 
-# ---------------------------------------------------------
-# 6. Endpoints
-# ---------------------------------------------------------
+
+# Endpoints
+
 @app.get("/")
 def health_check():
     return {
@@ -165,16 +163,15 @@ def health_check():
 @app.post("/predict", response_model=CareerPredictResponse)
 def predict_career(payload: CareerPredictRequest):
     """Predicts suitable career category based on 32 student skills."""
-    if supervised_model is None or pca is None or scaler is None:
+    if supervised_model is None or scaler is None:
         raise HTTPException(status_code=500, detail="Supervised model artifacts not loaded.")
 
     try:
         df_skills = prepare_skill_dataframe(payload.skills)
         scaled_skills = scaler.transform(df_skills)
-        pca_skills = pca.transform(scaled_skills)
 
-        predicted_career = supervised_model.predict(pca_skills)[0]
-        probabilities = supervised_model.predict_proba(pca_skills)[0]
+        predicted_career = supervised_model.predict(scaled_skills)[0]
+        probabilities = supervised_model.predict_proba(scaled_skills)[0]
         confidence = float(np.max(probabilities))
 
         return CareerPredictResponse(
@@ -211,7 +208,7 @@ def analyze_skill_gap(payload: SkillGapRequest):
     Compares student skills against requirements of target career from skill_gap_analysis.ipynb.
     Returns match_score, skills_you_have, and skills_to_learn (gaps).
     """
-    # Find matching career key (case-insensitive)
+    # Find matching career  key (case-insensitive)
     matched_career = next((c for c in CAREER_SKILLS if c.lower() == payload.career.lower()), None)
     if not matched_career:
         raise HTTPException(
@@ -242,9 +239,9 @@ def analyze_skill_gap(payload: SkillGapRequest):
         missing_skills=skills_to_learn
     )
 
-# ---------------------------------------------------------
+
 # 7. Local Entrypoint
-# ---------------------------------------------------------
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     is_local = "PORT" not in os.environ
