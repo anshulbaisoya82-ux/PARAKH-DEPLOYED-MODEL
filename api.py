@@ -234,9 +234,7 @@ def analyze_skill_gap(payload: SkillGapRequest):
         career=matched_career,
         match_score=match_score,
         skills_you_have=skills_have,
-        skills_to_learn=skills_to_learn,
-        current_skills=skills_have,
-        missing_skills=skills_to_learn
+        skills_to_learn=skills_to_learn
     )
 
 
