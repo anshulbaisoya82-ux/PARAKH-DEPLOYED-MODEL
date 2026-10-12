@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Annotated
 
 import joblib
 import numpy as np
@@ -7,7 +7,7 @@ import pandas as pd
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # 1. Initialize FastAPI Application
@@ -18,7 +18,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Enable CORS for frontend and backend integration
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,9 +28,7 @@ app.add_middleware(
 )
 
 
-# 2. Configurations & Mappings
 
-# 32 exact skill features fitted during training
 SKILL_COLUMNS = [
     "python", "java", "c_cpp", "javascript", "typescript", "html_css",
     "react", "angular_vue", "nodejs", "fastapi_flask", "django", "sql",
@@ -140,7 +138,7 @@ class SkillGapResponse(BaseModel):
     skills_to_learn: List[str]
 
 
-# Preprocessing the input 
+
 
 def prepare_skill_dataframe(skills_dict: Dict[str, Any]) -> pd.DataFrame:
     row = {col: 1 if skills_dict.get(col, 0) in [1, True, "1"] else 0 for col in SKILL_COLUMNS}
@@ -152,15 +150,13 @@ def prepare_skill_dataframe(skills_dict: Dict[str, Any]) -> pd.DataFrame:
 @app.get("/")
 def health_check():
     return {
-        "status": "healthy",
-        "service": "PARAKH ML Inference Service",
-        "docs_url": "/docs"
-    }
+        "status": "healthy"
+    } 
 
 
 @app.post("/predict", response_model=CareerPredictResponse)
 def predict_career(payload: CareerPredictRequest):
-    """Predicts suitable career category based on 32 student skills."""
+
     if supervised_model is None or scaler is None:
         raise HTTPException(status_code=500, detail="Supervised model artifacts not loaded.")
 
@@ -182,7 +178,7 @@ def predict_career(payload: CareerPredictRequest):
 
 @app.post("/cluster", response_model=ClusterResponse)
 def cluster_student(payload: ClusterRequest):
-    """Assigns student to a skill cluster using K-Means (k=2)."""
+
     if kmeans_model is None or scaler is None:
         raise HTTPException(status_code=500, detail="Clustering artifacts not loaded.")
 
@@ -202,11 +198,7 @@ def cluster_student(payload: ClusterRequest):
 
 @app.post("/skill-gap", response_model=SkillGapResponse)
 def analyze_skill_gap(payload: SkillGapRequest):
-    """
-    Compares student skills against requirements of target career from skill_gap_analysis.ipynb.
-    Returns match_score, skills_you_have, and skills_to_learn (gaps).
-    """
-    # Find matching career  key (case-insensitive)
+    
     matched_career = next((c for c in CAREER_SKILLS if c.lower() == payload.career.lower()), None)
     if not matched_career:
         raise HTTPException(
@@ -234,12 +226,3 @@ def analyze_skill_gap(payload: SkillGapRequest):
         skills_you_have=skills_have,
         skills_to_learn=skills_to_learn
     )
-
-
-# 7. Local Entrypoint
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    is_local = "PORT" not in os.environ
-    print(f"Starting ML Service on http://127.0.0.1:{port}")
-    uvicorn.run("api:app", host="0.0.0.0", port=port, reload=is_local)
